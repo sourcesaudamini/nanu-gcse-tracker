@@ -1,12 +1,13 @@
 import { subjects } from './data.js';
 import { loadProgress, saveProgress, toggleTopic, exportJSON, importJSON, clearProgress } from './storage.js';
 import { getSubjectProgress, getTotalProgress } from './progress.js';
-import { isSyncEnabled, getSyncUrl, setSyncUrl, clearSyncUrl, cloudSave, cloudLoad } from './sync.js';
+import { hasBlobId, cloudSave, cloudLoad } from './sync.js';
 
 // --- DOM refs ---
 const app = document.getElementById('app');
 const totalPct = document.getElementById('total-pct');
 const totalBar = document.getElementById('total-bar');
+const btnSave = document.getElementById('btn-save');
 const btnExport = document.getElementById('btn-export');
 const btnImport = document.getElementById('btn-import');
 const btnClear = document.getElementById('btn-clear');
@@ -14,33 +15,16 @@ const fileInput = document.getElementById('file-input');
 const overlay = document.getElementById('overlay');
 const overlaySubject = document.getElementById('overlay-subject');
 const btnDismiss = document.getElementById('btn-dismiss');
-const btnSave = document.getElementById('btn-save');
-const btnSync = document.getElementById('btn-sync');
-const syncModal = document.getElementById('sync-modal');
-const syncInput = document.getElementById('sync-url-input');
-const btnSyncSave = document.getElementById('btn-sync-save');
-const btnSyncDisconnect = document.getElementById('btn-sync-disconnect');
-const btnSyncClose = document.getElementById('btn-sync-close');
 const syncStatus = document.getElementById('sync-status');
 
-// --- Cloud sync helper ---
-async function pushToCloud() {
-  if (!isSyncEnabled()) return;
-  try {
-    await cloudSave(loadProgress());
-    flashSyncStatus('SYNCED');
-  } catch {
-    flashSyncStatus('OFFLINE');
-  }
-}
-
-function flashSyncStatus(text) {
+// --- Status flash ---
+function flashStatus(text) {
   syncStatus.textContent = text;
   syncStatus.classList.add('visible');
   clearTimeout(syncStatus._timer);
   syncStatus._timer = setTimeout(() => {
     syncStatus.classList.remove('visible');
-  }, 1500);
+  }, 2000);
 }
 
 // --- Render ---
@@ -136,9 +120,6 @@ app.addEventListener('click', (e) => {
 
     updateTotalProgress();
 
-    // Sync to cloud
-    pushToCloud();
-
     // All Out Attack check
     if (pct === 100 && !wasComplete) {
       showAllOutAttack(subject.name);
@@ -156,67 +137,35 @@ btnDismiss.addEventListener('click', () => {
   overlay.hidden = true;
 });
 
-// --- Save button ---
+// --- SAVE button — saves to cloud ---
 btnSave.addEventListener('click', async () => {
-  // localStorage is already saved on every toggle, but this also pushes to cloud
   btnSave.textContent = 'SAVING...';
+  btnSave.disabled = true;
+
   try {
-    await pushToCloud();
+    await cloudSave(loadProgress());
     btnSave.textContent = 'SAVED!';
     btnSave.classList.add('saved');
-  } catch {
-    // No cloud sync — local save is still fine
-    btnSave.textContent = 'SAVED!';
-    btnSave.classList.add('saved');
+
+    // Copy the shareable URL to clipboard so she can open it on other devices
+    const shareUrl = window.location.href.split('#')[0] + '#' + window.location.hash.slice(1);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      flashStatus('SAVED & LINK COPIED');
+    } catch {
+      flashStatus('SAVED TO CLOUD');
+    }
+  } catch (err) {
+    btnSave.textContent = 'ERROR';
+    flashStatus('SAVE FAILED — TRY AGAIN');
   }
+
   setTimeout(() => {
     btnSave.textContent = 'SAVE';
     btnSave.classList.remove('saved');
+    btnSave.disabled = false;
   }, 1500);
 });
-
-// --- Sync settings modal ---
-btnSync.addEventListener('click', () => {
-  syncInput.value = getSyncUrl();
-  btnSyncDisconnect.style.display = isSyncEnabled() ? 'inline-block' : 'none';
-  syncModal.hidden = false;
-});
-
-btnSyncClose.addEventListener('click', () => {
-  syncModal.hidden = true;
-});
-
-btnSyncSave.addEventListener('click', async () => {
-  const url = syncInput.value.trim();
-  if (!url) {
-    alert('Please enter your Firebase Database URL.');
-    return;
-  }
-  setSyncUrl(url);
-
-  // Push current local progress to cloud
-  try {
-    await cloudSave(loadProgress());
-    alert('Connected! Your progress will now sync across devices.');
-  } catch {
-    alert('Could not connect. Check the URL and your database rules.');
-    clearSyncUrl();
-    return;
-  }
-
-  syncModal.hidden = true;
-  updateSyncIndicator();
-});
-
-btnSyncDisconnect.addEventListener('click', () => {
-  clearSyncUrl();
-  syncModal.hidden = true;
-  updateSyncIndicator();
-});
-
-function updateSyncIndicator() {
-  btnSync.classList.toggle('connected', isSyncEnabled());
-}
 
 // --- Export ---
 btnExport.addEventListener('click', () => {
@@ -244,7 +193,6 @@ fileInput.addEventListener('change', (e) => {
     try {
       importJSON(ev.target.result);
       render();
-      pushToCloud();
     } catch (err) {
       alert('Invalid backup file. Please select a valid JSON export.');
     }
@@ -254,31 +202,32 @@ fileInput.addEventListener('change', (e) => {
 });
 
 // --- Clear ---
-btnClear.addEventListener('click', () => {
+btnClear.addEventListener('click', async () => {
   if (confirm('Clear ALL progress? This cannot be undone.')) {
     clearProgress();
     render();
-    pushToCloud();
+    if (hasBlobId()) {
+      try { await cloudSave({}); } catch {}
+    }
   }
 });
 
 // --- Init ---
 async function init() {
-  // If cloud sync is enabled, load from cloud first
-  if (isSyncEnabled()) {
+  // If there's a blob ID (from URL hash or localStorage), load cloud data
+  if (hasBlobId()) {
     try {
       const cloudData = await cloudLoad();
       if (cloudData && Object.keys(cloudData).length > 0) {
         saveProgress(cloudData);
+        flashStatus('LOADED FROM CLOUD');
       }
-      flashSyncStatus('SYNCED');
     } catch {
-      flashSyncStatus('OFFLINE');
+      flashStatus('OFFLINE — USING LOCAL DATA');
     }
   }
 
   render();
-  updateSyncIndicator();
 }
 
 init();

@@ -34,35 +34,10 @@
   <!-- Toolbar -->
   <div class="toolbar">
     <button class="btn btn--save" id="btn-save">SAVE</button>
-    <button class="btn btn--sync" id="btn-sync">SYNC</button>
     <button class="btn btn--export" id="btn-export">EXPORT</button>
     <button class="btn btn--import" id="btn-import">IMPORT</button>
     <button class="btn btn--clear" id="btn-clear">CLEAR</button>
     <input type="file" id="file-input" accept=".json" hidden>
-  </div>
-
-  <!-- Sync settings modal -->
-  <div class="modal" id="sync-modal" hidden>
-    <div class="modal-content">
-      <h2 class="modal-title">CLOUD SYNC</h2>
-      <p class="modal-desc">Enter your Firebase Realtime Database URL to sync progress across devices.</p>
-      <input type="url" class="modal-input" id="sync-url-input" placeholder="https://your-project.firebaseio.com">
-      <div class="modal-actions">
-        <button class="btn btn--export" id="btn-sync-save">CONNECT</button>
-        <button class="btn btn--clear" id="btn-sync-disconnect" style="display:none">DISCONNECT</button>
-        <button class="btn btn--import" id="btn-sync-close">CANCEL</button>
-      </div>
-      <div class="modal-help">
-        <p><strong>Quick setup (free):</strong></p>
-        <ol>
-          <li>Go to <strong>console.firebase.google.com</strong></li>
-          <li>Create a project (any name)</li>
-          <li>Build &rarr; Realtime Database &rarr; Create Database</li>
-          <li>Choose region, start in <strong>test mode</strong></li>
-          <li>Copy the database URL and paste it above</li>
-        </ol>
-      </div>
-    </div>
   </div>
 
   <!-- All Out Attack overlay -->
