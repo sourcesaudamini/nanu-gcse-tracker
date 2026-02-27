@@ -1,7 +1,6 @@
 import { subjects } from './data.js';
-import { loadProgress, saveProgress, toggleTopic, exportJSON, importJSON, clearProgress } from './storage.js';
+import { loadProgress, toggleTopic, exportJSON, importJSON, clearProgress } from './storage.js';
 import { getSubjectProgress, getTotalProgress } from './progress.js';
-import { hasBlobId, cloudSave, cloudLoad } from './sync.js';
 
 // --- DOM refs ---
 const app = document.getElementById('app');
@@ -137,33 +136,14 @@ btnDismiss.addEventListener('click', () => {
   overlay.hidden = true;
 });
 
-// --- SAVE button — saves to cloud ---
-btnSave.addEventListener('click', async () => {
-  btnSave.textContent = 'SAVING...';
-  btnSave.disabled = true;
-
-  try {
-    await cloudSave(loadProgress());
-    btnSave.textContent = 'SAVED!';
-    btnSave.classList.add('saved');
-
-    // Copy the shareable URL to clipboard so she can open it on other devices
-    const shareUrl = window.location.href.split('#')[0] + '#' + window.location.hash.slice(1);
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      flashStatus('SAVED & LINK COPIED');
-    } catch {
-      flashStatus('SAVED TO CLOUD');
-    }
-  } catch (err) {
-    btnSave.textContent = 'ERROR';
-    flashStatus('SAVE FAILED — TRY AGAIN');
-  }
-
+// --- Save button ---
+btnSave.addEventListener('click', () => {
+  btnSave.textContent = 'SAVED!';
+  btnSave.classList.add('saved');
+  flashStatus('PROGRESS SAVED');
   setTimeout(() => {
     btnSave.textContent = 'SAVE';
     btnSave.classList.remove('saved');
-    btnSave.disabled = false;
   }, 1500);
 });
 
@@ -193,6 +173,7 @@ fileInput.addEventListener('change', (e) => {
     try {
       importJSON(ev.target.result);
       render();
+      flashStatus('PROGRESS IMPORTED');
     } catch (err) {
       alert('Invalid backup file. Please select a valid JSON export.');
     }
@@ -202,32 +183,12 @@ fileInput.addEventListener('change', (e) => {
 });
 
 // --- Clear ---
-btnClear.addEventListener('click', async () => {
+btnClear.addEventListener('click', () => {
   if (confirm('Clear ALL progress? This cannot be undone.')) {
     clearProgress();
     render();
-    if (hasBlobId()) {
-      try { await cloudSave({}); } catch {}
-    }
   }
 });
 
 // --- Init ---
-async function init() {
-  // If there's a blob ID (from URL hash or localStorage), load cloud data
-  if (hasBlobId()) {
-    try {
-      const cloudData = await cloudLoad();
-      if (cloudData && Object.keys(cloudData).length > 0) {
-        saveProgress(cloudData);
-        flashStatus('LOADED FROM CLOUD');
-      }
-    } catch {
-      flashStatus('OFFLINE — USING LOCAL DATA');
-    }
-  }
-
-  render();
-}
-
-init();
+render();
