@@ -14,6 +14,7 @@ const fileInput = document.getElementById('file-input');
 const overlay = document.getElementById('overlay');
 const overlaySubject = document.getElementById('overlay-subject');
 const btnDismiss = document.getElementById('btn-dismiss');
+const btnSave = document.getElementById('btn-save');
 const btnSync = document.getElementById('btn-sync');
 const syncModal = document.getElementById('sync-modal');
 const syncInput = document.getElementById('sync-url-input');
@@ -153,6 +154,25 @@ function showAllOutAttack(subjectName) {
 
 btnDismiss.addEventListener('click', () => {
   overlay.hidden = true;
+});
+
+// --- Save button ---
+btnSave.addEventListener('click', async () => {
+  // localStorage is already saved on every toggle, but this also pushes to cloud
+  btnSave.textContent = 'SAVING...';
+  try {
+    await pushToCloud();
+    btnSave.textContent = 'SAVED!';
+    btnSave.classList.add('saved');
+  } catch {
+    // No cloud sync — local save is still fine
+    btnSave.textContent = 'SAVED!';
+    btnSave.classList.add('saved');
+  }
+  setTimeout(() => {
+    btnSave.textContent = 'SAVE';
+    btnSave.classList.remove('saved');
+  }, 1500);
 });
 
 // --- Sync settings modal ---

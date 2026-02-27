@@ -366,6 +366,18 @@ body {
   transform: skewX(var(--skew)) scale(0.95);
 }
 
+.btn--save {
+  background: var(--yellow);
+  color: var(--black);
+  font-size: 1.05rem;
+  padding: 0.6rem 1.5rem;
+}
+
+.btn--save.saved {
+  background: #00CC00;
+  color: var(--white);
+}
+
 .btn--export {
   background: var(--red);
   color: var(--white);
